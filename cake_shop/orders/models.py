@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
+from decimal import Decimal
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -83,9 +83,9 @@ class Cake(models.Model):
 
         # коэффициент размера
         if self.size == 'M':
-            price *= 1.2
+            price *= Decimal('1.2')
         elif self.size == 'L':
-            price *= 1.5
+            price *= Decimal('1.5')
 
         return round(price, 2)
 
@@ -108,6 +108,13 @@ class Order(models.Model):
         ('delivered', 'Delivered'),
     )
 
+    DELIVERY_CHOICES = (
+    ('delivery', 'Доставка'),
+    ('pickup', 'Самовывоз'),
+    )
+
+
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cake = models.OneToOneField(Cake, on_delete=models.CASCADE)
 
@@ -116,8 +123,23 @@ class Order(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    delivery_type = models.CharField(
+        max_length=10,
+        choices=DELIVERY_CHOICES,
+        default='delivery'
+    )
+    
     def __str__(self):
         return f"Order #{self.id} - {self.status}"
+    
+    def next_status(self):
+        order_flow = ['new', 'processing', 'baking', 'ready', 'delivered']
+        try:
+            current_index = order_flow.index(self.status)
+            self.status = order_flow[current_index + 1]
+            self.save()
+        except (ValueError, IndexError):
+            pass
 
 
 class Payment(models.Model):

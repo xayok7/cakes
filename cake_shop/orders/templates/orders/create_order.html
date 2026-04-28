@@ -1,0 +1,13 @@
+<h2>Оформление заказа</h2>
+
+<p>Цена торта: {{ cake.total_price }}</p>
+
+<a href="{% url 'edit_cake' cake.id %}">
+    <button>Изменить параметры торта</button>
+</a>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Создать заказ</button>
+</form>
