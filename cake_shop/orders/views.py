@@ -11,6 +11,7 @@ from .services.pricing import (
     DiscountPriceStrategy,
     VipPriceStrategy
 )
+from .factories import get_factory
 
 def home(request):
     return redirect('create_cake')
@@ -19,11 +20,22 @@ def home(request):
 def create_cake(request):
     if request.method == 'POST':
         form = CakeForm(request.POST)
+
         if form.is_valid():
-            cake = form.save(commit=False)
-            cake.user = User.objects.first()
-            cake.save()
-            form.save_m2m()
+            user = User.objects.first()
+            validated_data = form.cleaned_data
+            decorations = validated_data.get('decorations')
+
+            # 👇 получаем тип торта из формы
+            cake_type = request.POST.get('cake_type')
+
+            # 👇 выбираем фабрику
+            factory = get_factory(cake_type)
+
+            # 👇 создаём торт через фабрику
+            cake = factory.create(user, validated_data, decorations)
+
+            # 👇 стратегия (оставляем как есть)
             if cake.price_type == 'standard':
                 strategy = StandardPriceStrategy()
             elif cake.price_type == 'discount':
@@ -33,12 +45,13 @@ def create_cake(request):
 
             cake.total_price = strategy.calculate(cake)
             cake.save()
+
             return redirect('create_order', cake_id=cake.id)
+
     else:
         form = CakeForm()
 
     return render(request, 'orders/create_cake.html', {'form': form})
-
 
 def create_order(request, cake_id):
     cake = Cake.objects.get(id=cake_id)

@@ -2,6 +2,17 @@
 
 <form method="post">
     {% csrf_token %}
+
     {{ form.as_p }}
+
+    <h3>Тип торта</h3>
+    <select name="cake_type">
+        <option value="standard">Обычный</option>
+        <option value="candy">Сладкий (дефолтные украшения)</option>
+        <option value="premium">Премиум (дорогой декор)</option>
+    </select>
+
+    <br><br>
+
     <button type="submit">Далее</button>
 </form>
