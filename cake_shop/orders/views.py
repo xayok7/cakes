@@ -12,6 +12,11 @@ from .services.pricing import (
     VipPriceStrategy
 )
 from .factories import get_factory
+from .services.decorators import (
+    CandlesDecorator,
+    TextDecorator,
+    ExpressDecorator
+)
 
 def home(request):
     return redirect('create_cake')
@@ -26,16 +31,12 @@ def create_cake(request):
             validated_data = form.cleaned_data
             decorations = validated_data.get('decorations')
 
-            # 👇 получаем тип торта из формы
             cake_type = request.POST.get('cake_type')
-
-            # 👇 выбираем фабрику
             factory = get_factory(cake_type)
 
-            # 👇 создаём торт через фабрику
             cake = factory.create(user, validated_data, decorations)
 
-            # 👇 стратегия (оставляем как есть)
+            # стратегия
             if cake.price_type == 'standard':
                 strategy = StandardPriceStrategy()
             elif cake.price_type == 'discount':
@@ -44,6 +45,20 @@ def create_cake(request):
                 strategy = VipPriceStrategy()
 
             cake.total_price = strategy.calculate(cake)
+
+            # декораторы
+            decorated = cake
+
+            if request.POST.get('candles'):
+                decorated = CandlesDecorator(decorated)
+
+            if request.POST.get('text'):
+                decorated = TextDecorator(decorated)
+
+            if request.POST.get('express'):
+                decorated = ExpressDecorator(decorated)
+
+            cake.total_price = decorated.get_price()
             cake.save()
 
             return redirect('create_order', cake_id=cake.id)

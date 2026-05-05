@@ -13,7 +13,6 @@ class BaseCakeFactory:
             price_type=validated_data['price_type']
         )
 
-        # если пользователь выбрал декорации — используем их
         if decorations:
             cake.decorations.set(decorations)
         else:
@@ -22,7 +21,6 @@ class BaseCakeFactory:
         return cake
 
     def apply_defaults(self, cake):
-        """дефолт — ничего не добавляем"""
         pass
 
 
