@@ -5,7 +5,7 @@ from .models import Cake, Order
 class CakeForm(forms.ModelForm):
     class Meta:
         model = Cake
-        fields = ['base', 'cream', 'filling', 'decorations', 'size', 'shape']
+        fields = ['base', 'cream', 'filling', 'decorations', 'size', 'shape', 'price_type']
         widgets = {
             'decorations': forms.CheckboxSelectMultiple()
         }

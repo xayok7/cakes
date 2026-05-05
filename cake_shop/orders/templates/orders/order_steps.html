@@ -1,0 +1,13 @@
+<h2>Обработка заказа</h2>
+
+<p>Заказ №{{ order.id }}</p>
+
+<ul>
+    {% for step in steps %}
+        <li>{{ step }}</li>
+    {% endfor %}
+</ul>
+
+<a href="/cake/">
+    Новый заказ
+</a>

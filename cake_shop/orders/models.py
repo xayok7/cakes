@@ -54,6 +54,12 @@ class Cake(models.Model):
         ('square', 'Square'),
     )
 
+    PRICE_TYPE_CHOICES = (
+        ('standard', 'Обычная'),
+        ('discount', 'Со скидкой'),
+        ('vip', 'VIP'),
+    )
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     base = models.ForeignKey(Base, on_delete=models.SET_NULL, null=True)
@@ -63,6 +69,8 @@ class Cake(models.Model):
 
     size = models.CharField(max_length=1, choices=SIZE_CHOICES)
     shape = models.CharField(max_length=10, choices=SHAPE_CHOICES)
+
+    price_type = models.CharField(max_length=20, choices=PRICE_TYPE_CHOICES, default='standard')
 
     total_price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
@@ -88,12 +96,6 @@ class Cake(models.Model):
             price *= Decimal('1.5')
 
         return round(price, 2)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)  # сначала сохраняем, чтобы был id
-
-        self.total_price = self.calculate_price()
-        super().save(update_fields=['total_price'])
 
     def __str__(self):
         return f"Cake #{self.id} - {self.user.username}"

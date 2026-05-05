@@ -1,7 +1,16 @@
 from django.shortcuts import render, redirect
 from .forms import CakeForm, OrderForm
-from .models import Cake, Order, Payment
+from .models import Cake, Order, Payment, User
 from django.shortcuts import redirect
+from .services.order_processing import (
+    DeliveryOrderProcessor,
+    PickupOrderProcessor
+)
+from .services.pricing import (
+    StandardPriceStrategy,
+    DiscountPriceStrategy,
+    VipPriceStrategy
+)
 
 def home(request):
     return redirect('create_cake')
@@ -12,9 +21,18 @@ def create_cake(request):
         form = CakeForm(request.POST)
         if form.is_valid():
             cake = form.save(commit=False)
-            cake.user = request.user
+            cake.user = User.objects.first()
             cake.save()
             form.save_m2m()
+            if cake.price_type == 'standard':
+                strategy = StandardPriceStrategy()
+            elif cake.price_type == 'discount':
+                strategy = DiscountPriceStrategy()
+            else:
+                strategy = VipPriceStrategy()
+
+            cake.total_price = strategy.calculate(cake)
+            cake.save()
             return redirect('create_order', cake_id=cake.id)
     else:
         form = CakeForm()
@@ -29,14 +47,23 @@ def create_order(request, cake_id):
         form = OrderForm(request.POST)
         if form.is_valid():
             order = form.save(commit=False)
-            order.user = request.user
+            order.user = User.objects.first()
             order.cake = cake
 
             if order.delivery_type == 'pickup':
                 order.address = 'Самовывоз'
 
             order.save()
-            return redirect('pay_order', order_id=order.id)
+            if order.delivery_type == 'delivery':
+                processor = DeliveryOrderProcessor()
+            else:
+                processor = PickupOrderProcessor()
+
+            steps = processor.process_order()
+            return render(request, 'orders/order_steps.html', {
+                'steps': steps,
+                'order': order
+            })
 
     else:
         form = OrderForm()
@@ -69,11 +96,9 @@ def pay_order(request, order_id):
         }
     )
 
-    # имитация успешной оплаты
     payment.status = 'paid'
     payment.save()
 
-    # обновляем статус заказа
     order.status = 'processing'
     order.save()
 
