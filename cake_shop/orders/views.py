@@ -1,22 +1,13 @@
 from django.shortcuts import render, redirect
 from .forms import CakeForm, OrderForm
 from .models import Cake, Order, Payment, User
-from django.shortcuts import redirect
-from .services.order_processing import (
-    DeliveryOrderProcessor,
-    PickupOrderProcessor
-)
-from .services.pricing import (
-    StandardPriceStrategy,
-    DiscountPriceStrategy,
-    VipPriceStrategy
-)
+from .services.order_processing import DeliveryOrderProcessor, PickupOrderProcessor
+from .services.pricing import StandardPriceStrategy, DiscountPriceStrategy, VipPriceStrategy
 from .factories import get_factory
-from .services.decorators import (
-    CandlesDecorator,
-    TextDecorator,
-    ExpressDecorator
-)
+from .services.decorators import CandlesDecorator, TextDecorator, ExpressDecorator
+from .services.commands import PayOrderCommand, AdvanceOrderStatusCommand, OrderInvoker
+from .services.generators import ClientReceipt, KitchenTicket
+
 
 def home(request):
     return redirect('create_cake')
@@ -62,11 +53,11 @@ def create_cake(request):
             cake.save()
 
             return redirect('create_order', cake_id=cake.id)
-
     else:
         form = CakeForm()
 
     return render(request, 'orders/create_cake.html', {'form': form})
+
 
 def create_order(request, cake_id):
     cake = Cake.objects.get(id=cake_id)
@@ -82,17 +73,23 @@ def create_order(request, cake_id):
                 order.address = 'Самовывоз'
 
             order.save()
+            
             if order.delivery_type == 'delivery':
                 processor = DeliveryOrderProcessor()
             else:
                 processor = PickupOrderProcessor()
 
             steps = processor.process_order()
+
+            receipt = ClientReceipt().generate(order)
+            ticket = KitchenTicket().generate(order)
+
             return render(request, 'orders/order_steps.html', {
                 'steps': steps,
-                'order': order
+                'order': order,
+                'receipt': receipt,
+                'ticket': ticket
             })
-
     else:
         form = OrderForm()
 
@@ -100,6 +97,7 @@ def create_order(request, cake_id):
         'form': form,
         'cake': cake
     })
+
 
 def edit_cake(request, cake_id):
     cake = Cake.objects.get(id=cake_id)
@@ -114,31 +112,32 @@ def edit_cake(request, cake_id):
 
     return render(request, 'orders/edit_cake.html', {'form': form})
 
+
 def pay_order(request, order_id):
     order = Order.objects.get(id=order_id)
 
     payment, created = Payment.objects.get_or_create(
         order=order,
-        defaults={
-            'amount': order.cake.total_price
-        }
+        defaults={'amount': order.cake.total_price}
     )
 
-    payment.status = 'paid'
-    payment.save()
-
-    order.status = 'processing'
-    order.save()
+    invoker = OrderInvoker()
+    command = PayOrderCommand(payment, order)
+    invoker.execute_command(command)
 
     return render(request, 'orders/payment_success.html', {
         'order': order
     })
 
+
 def advance_order(request, order_id):
     order = Order.objects.get(id=order_id)
-    order.next_status()
-    return redirect('order_detail', order_id=order.id)
-
+    
+    invoker = OrderInvoker()
+    command = AdvanceOrderStatusCommand(order)
+    invoker.execute_command(command)
+    
+    return redirect('home')
 
 
 def success(request):

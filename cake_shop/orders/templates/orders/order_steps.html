@@ -1,5 +1,4 @@
 <h2>Обработка заказа</h2>
-
 <p>Заказ №{{ order.id }}</p>
 
 <ul>
@@ -8,6 +7,20 @@
     {% endfor %}
 </ul>
 
-<a href="/cake/">
-    Новый заказ
-</a>
+<h3>Документы</h3>
+<div style="display: flex; gap: 20px;">
+    <div>
+        <b>Чек клиента:</b>
+        <pre style="border: 1px solid #ccc; padding: 10px;">{{ receipt }}</pre>
+    </div>
+    <div>
+        <b>Талон на кухню:</b>
+        <pre style="border: 1px solid #ff9999; padding: 10px; background: #fff5f5;">{{ ticket }}</pre>
+    </div>
+</div>
+
+<br>
+<form action="{% url 'pay_order' order.id %}" method="post">
+    {% csrf_token %}
+    <button type="submit" style="background: green; color: white; padding: 10px;">Оплатить заказ</button>
+</form>
