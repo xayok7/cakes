@@ -20,3 +20,48 @@
     <br>
     <button type="submit">Далее</button>
 </form>
+
+
+<hr>
+
+
+<h2>Выбери пирог</h2>
+
+<form method="post" action="{% url 'create_pie' %}">
+    {% csrf_token %}
+
+    <!-- карточки -->
+    <div style="display:flex; gap:20px; margin-bottom:20px;">
+        <label>
+            <input type="radio" name="name" value="apple" required>
+            🍎 Яблочный
+        </label>
+
+        <label>
+            <input type="radio" name="name" value="cherry">
+            🍒 Вишнёвый
+        </label>
+
+        <label>
+            <input type="radio" name="name" value="meat">
+            🥩 Мясной
+        </label>
+    </div>
+
+    <h3>Размер</h3>
+    <select name="size">
+        <option value="S">Маленький</option>
+        <option value="M">Средний</option>
+        <option value="L">Большой</option>
+    </select>
+
+    <h3>Тесто</h3>
+    <select name="dough">
+        <option value="classic">Классическое</option>
+        <option value="puff">Слоёное (+3)</option>
+        <option value="sweet">Сдобное (+2)</option>
+    </select>
+
+    <br><br>
+    <button type="submit">Создать пирог</button>
+</form>

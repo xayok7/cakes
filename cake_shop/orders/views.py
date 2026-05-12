@@ -1,10 +1,14 @@
 from django.shortcuts import render, redirect
 from .forms import CakeForm, OrderForm
-from .models import Cake, Order, Payment, User
+from .models import Cake, Order, Payment, User, Pie
+
 from .services.order_processing import DeliveryOrderProcessor, PickupOrderProcessor
-from .services.pricing import StandardPriceStrategy, DiscountPriceStrategy, VipPriceStrategy
+
+from .services.pricing import SimplePieStrategy
+
 from .factories import get_factory
 from .services.decorators import CandlesDecorator, TextDecorator, ExpressDecorator
+
 from .services.commands import PayOrderCommand, AdvanceOrderStatusCommand, OrderInvoker
 from .services.generators import ClientReceipt, KitchenTicket
 
@@ -12,6 +16,8 @@ from .services.generators import ClientReceipt, KitchenTicket
 def home(request):
     return redirect('create_cake')
 
+
+# -------------------- ТОРТЫ (НЕ ТРОГАЕМ ЛОГИКУ) --------------------
 
 def create_cake(request):
     if request.method == 'POST':
@@ -27,15 +33,6 @@ def create_cake(request):
 
             cake = factory.create(user, validated_data, decorations)
 
-            # стратегия
-            if cake.price_type == 'standard':
-                strategy = StandardPriceStrategy()
-            elif cake.price_type == 'discount':
-                strategy = DiscountPriceStrategy()
-            else:
-                strategy = VipPriceStrategy()
-
-            cake.total_price = strategy.calculate(cake)
 
             # декораторы
             decorated = cake
@@ -59,6 +56,29 @@ def create_cake(request):
     return render(request, 'orders/create_cake.html', {'form': form})
 
 
+def create_pie(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        size = request.POST.get('size')
+        dough = request.POST.get('dough')
+
+        pie = Pie.objects.create(
+            name=name,
+            size=size,
+            dough=dough
+        )
+
+        strategy = SimplePieStrategy()
+        pie.total_price = strategy.calculate(pie)
+        pie.save()
+
+        return redirect('success')
+
+    return redirect('home')
+
+
+# -------------------- ЗАКАЗЫ --------------------
+
 def create_order(request, cake_id):
     cake = Cake.objects.get(id=cake_id)
 
@@ -73,7 +93,7 @@ def create_order(request, cake_id):
                 order.address = 'Самовывоз'
 
             order.save()
-            
+
             if order.delivery_type == 'delivery':
                 processor = DeliveryOrderProcessor()
             else:
@@ -132,11 +152,11 @@ def pay_order(request, order_id):
 
 def advance_order(request, order_id):
     order = Order.objects.get(id=order_id)
-    
+
     invoker = OrderInvoker()
     command = AdvanceOrderStatusCommand(order)
     invoker.execute_command(command)
-    
+
     return redirect('home')
 
 

@@ -1,0 +1,2 @@
+[2026-05-06T12:02:59.698390] ORDER_STATUS_CHANGED | DATA: {'order_id': 20, 'user': 'admin', 'new_status': 'processing', 'price': 2685.0}
+[2026-05-13T00:02:32.808625] ORDER_STATUS_CHANGED | DATA: {'order_id': 21, 'user': 'admin', 'new_status': 'processing', 'price': 676.0}

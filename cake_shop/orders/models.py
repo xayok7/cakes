@@ -42,6 +42,38 @@ class Decoration(models.Model):
         return self.name
 
 
+from decimal import Decimal
+
+from decimal import Decimal
+
+class Pie(models.Model):
+    PIE_TYPES = (
+        ('apple', 'Яблочный'),
+        ('cherry', 'Вишнёвый'),
+        ('meat', 'Мясной'),
+    )
+
+    SIZE_CHOICES = (
+        ('S', 'Small'),
+        ('M', 'Medium'),
+        ('L', 'Large'),
+    )
+
+    DOUGH_CHOICES = (
+        ('classic', 'Классическое'),
+        ('puff', 'Слоёное'),
+        ('sweet', 'Сдобное'),
+    )
+
+    name = models.CharField(max_length=50, choices=PIE_TYPES)
+    size = models.CharField(max_length=1, choices=SIZE_CHOICES)
+    dough = models.CharField(max_length=20, choices=DOUGH_CHOICES)
+
+    total_price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.get_name_display()} пирог"
+
 class Cake(models.Model):
     SIZE_CHOICES = (
         ('S', 'Small'),
