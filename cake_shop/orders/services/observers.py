@@ -10,11 +10,23 @@ class Observer(ABC):
         pass
 
 class OrderNotifier:
-    def __init__(self):
-        self._observers = []
+    _instance = None 
 
-    def attach(self, observer: Observer):
-        self._observers.append(observer)
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+            cls._instance._observers = []
+        
+        return cls._instance
+
+    def attach(self, observer):
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    def detach(self, observer):
+        if observer in self._observers:
+            self._observers.remove(observer)
+            print(f"[СИСТЕМА] Наблюдатель {observer.__class__.__name__} успешно отписан.")
 
     def notify(self, order):
         for obs in self._observers:
@@ -63,7 +75,9 @@ class AnalyticsAdapter(Observer):
         
         self.analytics.log_business_event("order_status_changed", payload, timestamp)
 
-# инициализация
+
 notifier = OrderNotifier()
-notifier.attach(EmailNotificationObserver())
-notifier.attach(AnalyticsAdapter(ExternalAnalyticsModule()))
+email_observer = EmailNotificationObserver()
+analytics_adapter = AnalyticsAdapter(ExternalAnalyticsModule())
+notifier.attach(email_observer)
+notifier.attach(analytics_adapter)

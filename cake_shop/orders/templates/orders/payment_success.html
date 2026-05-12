@@ -1,6 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Оплата успешна</title>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background: #ffe6f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* Заголовок */
+h2 {
+    color: #ff4d94;
+    margin-top: 40px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Блок информации */
+.info-block {
+    background: #fff0f6;
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #ffb3d1;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    margin-bottom: 30px;
+    color: #555;
+}
+
+/* Ссылка “Создать новый заказ” */
+a.new-order {
+    background-color: #ff4d94;
+    color: white;
+    text-decoration: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: background 0.3s;
+}
+
+a.new-order:hover {
+    background-color: #ff3399;
+}
+</style>
+</head>
+<body>
+
 <h2>Оплата прошла успешно</h2>
 
-<p>Заказ №{{ order.id }}</p>
-<p>Статус: {{ order.status }}</p>
+<div class="info-block">
+    <p>Заказ №{{ order.id }}</p>
+    <p>Статус: {{ order.status }}</p>
+</div>
 
-<a href="/cake/">Создать новый заказ</a>
+<a href="/cake/" class="new-order">Создать новый заказ</a>
+
+</body>
+</html>

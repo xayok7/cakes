@@ -113,21 +113,27 @@ class Cake(models.Model):
 
         if self.base:
             price += self.base.price
+
         if self.cream:
             price += self.cream.price
+
         if self.filling:
             price += self.filling.price
 
         for d in self.decorations.all():
             price += d.price
 
-        # коэффициент размера
         if self.size == 'M':
             price *= Decimal('1.2')
+
         elif self.size == 'L':
             price *= Decimal('1.5')
 
         return round(price, 2)
+
+    def get_price(self):
+        return self.calculate_price()
+
 
     def __str__(self):
         return f"Cake #{self.id} - {self.user.username}"

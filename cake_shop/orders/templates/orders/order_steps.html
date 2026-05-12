@@ -1,26 +1,135 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Обработка заказа</title>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background: #ffe6f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+h2 {
+    color: #ff4d94;
+    margin-top: 20px;
+    text-align: center;
+}
+
+p {
+    font-size: 1.1rem;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+/* Список шагов */
+ul.steps {
+    list-style-type: disc;
+    padding-left: 20px;
+    margin-bottom: 20px;
+}
+
+ul.steps li {
+    margin-bottom: 8px;
+    color: #555;
+}
+
+/* Документы */
+.documents {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+}
+
+.document {
+    background: #fff0f6;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #ffb3d1;
+    flex: 1;
+    min-width: 250px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.document pre {
+    background: #fff5f5;
+    border: 1px solid #ff9999;
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+/* Форма оплаты */
+form {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+form label {
+    cursor: pointer;
+    font-size: 1rem;
+    color: #555;
+}
+
+form button {
+    background: #28a745;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+form button:hover {
+    background: #218838;
+}
+</style>
+</head>
+<body>
+
 <h2>Обработка заказа</h2>
 <p>Заказ №{{ order.id }}</p>
 
-<ul>
+<ul class="steps">
     {% for step in steps %}
         <li>{{ step }}</li>
     {% endfor %}
 </ul>
 
 <h3>Документы</h3>
-<div style="display: flex; gap: 20px;">
-    <div>
+<div class="documents">
+    <div class="document">
         <b>Чек клиента:</b>
-        <pre style="border: 1px solid #ccc; padding: 10px;">{{ receipt }}</pre>
+        <pre>{{ receipt }}</pre>
     </div>
-    <div>
+    <div class="document">
         <b>Талон на кухню:</b>
-        <pre style="border: 1px solid #ff9999; padding: 10px; background: #fff5f5;">{{ ticket }}</pre>
+        <pre>{{ ticket }}</pre>
     </div>
 </div>
 
-<br>
 <form action="{% url 'pay_order' order.id %}" method="post">
     {% csrf_token %}
-    <button type="submit" style="background: green; color: white; padding: 10px;">Оплатить заказ</button>
+    <label>
+        <input type="checkbox" name="send_email" checked>
+        Отправить чек и уведомление на Email
+    </label>
+    <button type="submit">Оплатить заказ</button>
 </form>
+
+</body>
+</html>

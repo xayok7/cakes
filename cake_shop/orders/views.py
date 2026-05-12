@@ -1,23 +1,14 @@
 from django.shortcuts import render, redirect
 from .forms import CakeForm, OrderForm
-from .models import Cake, Order, Payment, User, Pie
-
-from .services.order_processing import DeliveryOrderProcessor, PickupOrderProcessor
-
+from .models import Cake, Order, User, Pie
+from .services.breakdown import CakeCategory, CakeItem
+from .services.facade import OrderManagementFacade
+from .services.commands import OrderInvoker, AdvanceOrderStatusCommand
 from .services.pricing import SimplePieStrategy
-
-from .factories import get_factory
-from .services.decorators import CandlesDecorator, TextDecorator, ExpressDecorator
-
-from .services.commands import PayOrderCommand, AdvanceOrderStatusCommand, OrderInvoker
-from .services.generators import ClientReceipt, KitchenTicket
-
+from .services.proxy import PricingProxy
 
 def home(request):
     return redirect('create_cake')
-
-
-# -------------------- ТОРТЫ (НЕ ТРОГАЕМ ЛОГИКУ) --------------------
 
 def create_cake(request):
     if request.method == 'POST':
@@ -28,33 +19,77 @@ def create_cake(request):
             validated_data = form.cleaned_data
             decorations = validated_data.get('decorations')
 
-            cake_type = request.POST.get('cake_type')
-            factory = get_factory(cake_type)
+            extras = {
+                'candles': request.POST.get('candles'),
+                'text': request.POST.get('text'),
+                'express': request.POST.get('express'),
+            }
 
-            cake = factory.create(user, validated_data, decorations)
-
-
-            # декораторы
-            decorated = cake
-
-            if request.POST.get('candles'):
-                decorated = CandlesDecorator(decorated)
-
-            if request.POST.get('text'):
-                decorated = TextDecorator(decorated)
-
-            if request.POST.get('express'):
-                decorated = ExpressDecorator(decorated)
-
-            cake.total_price = decorated.get_price()
-            cake.save()
+            facade = OrderManagementFacade()
+            cake = facade.create_and_calculate_cake(user, validated_data, decorations, extras)
 
             return redirect('create_order', cake_id=cake.id)
+        else:
+            print(form.errors)
     else:
         form = CakeForm()
 
     return render(request, 'orders/create_cake.html', {'form': form})
 
+def create_order(request, cake_id):
+    cake = Cake.objects.get(id=cake_id)
+
+    breakdown_root = CakeCategory("Спецификация вашего торта")
+
+    base_cat = CakeCategory("Основа и размер")
+    base_cat.add(CakeItem(f"Форма: {cake.get_shape_display()}"))
+    base_cat.add(CakeItem(f"Размер: {cake.get_size_display()}"))
+    breakdown_root.add(base_cat)
+
+    if cake.base or cake.cream or cake.filling:
+        fill_cat = CakeCategory("Внутреннее наполнение")
+        if cake.base:
+            fill_cat.add(CakeItem(f"Бисквит: {cake.base.name}"))
+        if cake.cream:
+            fill_cat.add(CakeItem(f"Крем: {cake.cream.name}"))
+        if cake.filling:
+            fill_cat.add(CakeItem(f"Начинка: {cake.filling.name}"))
+        breakdown_root.add(fill_cat)
+
+    if cake.decorations.exists():
+        decor_cat = CakeCategory("Дополнительный декор")
+        for decor in cake.decorations.all():
+            decor_cat.add(CakeItem(decor.name))
+        breakdown_root.add(decor_cat)
+
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.user = User.objects.first()
+            order.cake = cake
+            if order.delivery_type == 'pickup':
+                order.address = 'Самовывоз'
+            order.save()
+
+            facade = OrderManagementFacade()
+            steps = facade.process_order_delivery(order)
+            receipt, ticket = facade.get_order_documents(order)
+
+            return render(request, 'orders/order_steps.html', {
+                'steps': steps,
+                'order': order,
+                'receipt': receipt,
+                'ticket': ticket
+            })
+    else:
+        form = OrderForm()
+
+    return render(request, 'orders/create_order.html', {
+        'form': form,
+        'cake': cake,
+        'breakdown': breakdown_root
+    })
 
 def create_pie(request):
     if request.method == 'POST':
@@ -69,55 +104,14 @@ def create_pie(request):
         )
 
         strategy = SimplePieStrategy()
-        pie.total_price = strategy.calculate(pie)
+        proxy = PricingProxy(strategy)
+
+        pie.total_price = proxy.calculate(pie)
         pie.save()
 
         return redirect('success')
 
     return redirect('home')
-
-
-# -------------------- ЗАКАЗЫ --------------------
-
-def create_order(request, cake_id):
-    cake = Cake.objects.get(id=cake_id)
-
-    if request.method == 'POST':
-        form = OrderForm(request.POST)
-        if form.is_valid():
-            order = form.save(commit=False)
-            order.user = User.objects.first()
-            order.cake = cake
-
-            if order.delivery_type == 'pickup':
-                order.address = 'Самовывоз'
-
-            order.save()
-
-            if order.delivery_type == 'delivery':
-                processor = DeliveryOrderProcessor()
-            else:
-                processor = PickupOrderProcessor()
-
-            steps = processor.process_order()
-
-            receipt = ClientReceipt().generate(order)
-            ticket = KitchenTicket().generate(order)
-
-            return render(request, 'orders/order_steps.html', {
-                'steps': steps,
-                'order': order,
-                'receipt': receipt,
-                'ticket': ticket
-            })
-    else:
-        form = OrderForm()
-
-    return render(request, 'orders/create_order.html', {
-        'form': form,
-        'cake': cake
-    })
-
 
 def edit_cake(request, cake_id):
     cake = Cake.objects.get(id=cake_id)
@@ -125,30 +119,28 @@ def edit_cake(request, cake_id):
     if request.method == 'POST':
         form = CakeForm(request.POST, instance=cake)
         if form.is_valid():
-            form.save()
+            cake = form.save(commit=False)
+            cake.save()
+
+            form.save_m2m()
+
+            cake.total_price = cake.calculate_price()
+            cake.save()
             return redirect('create_order', cake_id=cake.id)
     else:
         form = CakeForm(instance=cake)
 
     return render(request, 'orders/edit_cake.html', {'form': form})
 
-
 def pay_order(request, order_id):
     order = Order.objects.get(id=order_id)
+    
+    wants_email = bool(request.POST.get('send_email'))
 
-    payment, created = Payment.objects.get_or_create(
-        order=order,
-        defaults={'amount': order.cake.total_price}
-    )
+    facade = OrderManagementFacade()
+    facade.process_payment(order, send_email=wants_email)
 
-    invoker = OrderInvoker()
-    command = PayOrderCommand(payment, order)
-    invoker.execute_command(command)
-
-    return render(request, 'orders/payment_success.html', {
-        'order': order
-    })
-
+    return render(request, 'orders/payment_success.html', {'order': order})
 
 def advance_order(request, order_id):
     order = Order.objects.get(id=order_id)
@@ -158,7 +150,6 @@ def advance_order(request, order_id):
     invoker.execute_command(command)
 
     return redirect('home')
-
 
 def success(request):
     return render(request, 'orders/success.html')

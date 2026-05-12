@@ -1,2 +1,52 @@
-<h2>Заказ успешно оформлен</h2>
-<a href="/cake/">Создать новый торт</a>
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Заказ успешно оформлен</title>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background: #ffe6f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    text-align: center;
+}
+
+h2 {
+    color: #ff4d94;
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+}
+
+a.new-order {
+    display: inline-block;
+    background-color: #ff4d94;
+    color: white;
+    text-decoration: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: background 0.3s;
+}
+
+a.new-order:hover {
+    background-color: #ff3399;
+}
+</style>
+</head>
+<body>
+
+<h2>Заказ успешно оформлен!<br>Благодарим вас за то, что выбрали нас!</h2>
+
+<a href="/cake/" class="new-order">Создать новый торт или пирог</a>
+
+</body>
+</html>
